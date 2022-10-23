@@ -3,6 +3,7 @@ package p2p
 import (
 	"crypto/ecdsa"
 	"fmt"
+	webtransport "github.com/libp2p/go-libp2p/p2p/transport/webtransport"
 	"net"
 
 	"github.com/libp2p/go-libp2p"
@@ -35,6 +36,7 @@ func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 	if err != nil {
 		log.WithError(err).Fatal("Failed to p2p listen")
 	}
+	webtransportAddr := ma.StringCast(fmt.Sprintf("/ip4/%s/udp/%d/quic/webtransport", ip.String(), cfg.TCPPort))
 	if cfg.LocalIP != "" {
 		if net.ParseIP(cfg.LocalIP) == nil {
 			log.Fatalf("Invalid local ip provided: %s", cfg.LocalIP)
@@ -43,6 +45,7 @@ func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 		if err != nil {
 			log.WithError(err).Fatal("Failed to p2p listen")
 		}
+		webtransportAddr = ma.StringCast(fmt.Sprintf("/ip4/%s/udp/%d/quic/webtransport", cfg.LocalIP, cfg.TCPPort))
 	}
 	ifaceKey, err := ecdsaprysm.ConvertToInterfacePrivkey(priKey)
 	if err != nil {
@@ -56,10 +59,11 @@ func (s *Service) buildOptions(ip net.IP, priKey *ecdsa.PrivateKey) []libp2p.Opt
 
 	options := []libp2p.Option{
 		privKeyOption(priKey),
-		libp2p.ListenAddrs(listen),
+		libp2p.ListenAddrs(listen, webtransportAddr),
 		libp2p.UserAgent(version.BuildData()),
 		libp2p.ConnectionGater(s),
 		libp2p.Transport(tcp.NewTCPTransport),
+		libp2p.Transport(webtransport.New),
 		libp2p.Muxer("/mplex/6.7.0", mplex.DefaultTransport),
 		libp2p.DefaultMuxers,
 	}
