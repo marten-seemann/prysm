@@ -12,18 +12,15 @@ import (
 var log = logrus.WithField("prefix", "p2p")
 
 func logIPAddr(id peer.ID, addrs ...ma.Multiaddr) {
-	var correctAddr ma.Multiaddr
+	var correctAddrs []ma.Multiaddr
+	p2pAddr := ma.StringCast("/p2p/" + id.String())
 	for _, addr := range addrs {
 		if strings.Contains(addr.String(), "/ip4/") || strings.Contains(addr.String(), "/ip6/") {
-			correctAddr = addr
-			break
+			correctAddrs = append(correctAddrs, addr.Encapsulate(p2pAddr))
 		}
 	}
-	if correctAddr != nil {
-		log.WithField(
-			"multiAddr",
-			correctAddr.String()+"/p2p/"+id.String(),
-		).Info("Node started p2p server")
+	if len(correctAddrs) > 0 {
+		log.WithField("multiAddrs", correctAddrs).Info("Node started p2p server")
 	}
 }
 
